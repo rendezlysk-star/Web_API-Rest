@@ -1,20 +1,86 @@
-const url = "https://www.demonslayer-api.com/api/v1/characters?limit=45";
-const contenedor = document.getElementById("contenedor");
+const API_URL = "https://www.demonslayer-api.com/api/v1/characters";
+const charactersContainer = document.getElementById("characters-container");
+const paginationContainer = document.getElementById("paginationId");
 
-fetch(url)
-  .then((response) => response.json())
-  .then((data) => {
-    data.content.forEach((personaje) => {
-      const card = document.createElement("div");
-      card.className = "card";
+function createCharacterCard(character) {
+  const card = document.createElement("article");
+  card.classList.add("card");
 
-      card.innerHTML = `
-        <img src="${personaje.img}" alt="${personaje.name}">
-        <p>${personaje.id}</p>
-        <h3>${personaje.name}</h3>
-        <p>Edad: ${personaje.age}</p>
-      `;
+  card.innerHTML = `
+        <img src="${character.img}" alt="${character.name}">
+        <p>${character.id}</p>
+        <h3>${character.name}</h3>
+        <p>Edad: ${character.age || "N/A"}</p>
+    `;
 
-      contenedor.appendChild(card);
-    });
+  card.addEventListener("click", () => {
+    window.location.href = `character-detail.html?identifier=${character.id}`;
   });
+
+  return card;
+}
+
+async function getCharacters(pageNumber) {
+  try {
+    const response = await fetch(API_URL + "?page=" + pageNumber);
+    const data = await response.json();
+
+    charactersContainer.innerHTML = "";
+
+    data.content.forEach((character) => {
+      const card = createCharacterCard(character);
+      charactersContainer.appendChild(card);
+    });
+
+    createPagination(data.pagination);
+  } catch (error) {
+    console.error("Error al obtener los datos:", error);
+  }
+}
+
+function createPagination(paginationData) {
+  paginationContainer.innerHTML = "";
+
+  const currentPage = paginationData.currentPage;
+  const totalPages = paginationData.totalPages;
+
+  // Botón Anterior
+  const previousButton = document.createElement("button");
+  previousButton.textContent = "Anterior";
+  previousButton.disabled = currentPage === 1;
+
+  previousButton.addEventListener("click", () => {
+    if (currentPage > 1) {
+      getCharacters(currentPage - 1);
+    }
+  });
+  paginationContainer.appendChild(previousButton);
+
+  // Botones numéricos de página
+  for (let i = 1; i <= totalPages; i++) {
+    const paginationButton = document.createElement("button");
+    paginationButton.textContent = i;
+    if (i === currentPage) {
+      paginationButton.disabled = true;
+    }
+
+    paginationButton.addEventListener("click", () => {
+      getCharacters(i);
+    });
+    paginationContainer.appendChild(paginationButton);
+  }
+
+  // Botón Siguiente
+  const nextButton = document.createElement("button");
+  nextButton.textContent = "Siguiente";
+  nextButton.disabled = currentPage === totalPages;
+
+  nextButton.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      getCharacters(currentPage + 1);
+    }
+  });
+  paginationContainer.appendChild(nextButton);
+}
+
+getCharacters(1);
